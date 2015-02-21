@@ -1,0 +1,150 @@
+#!/usr/bin/env ruby
+
+# ♫ Here's a little code I wrote, to keep me happy, note for note ♬ 
+
+# This program discovers images in the tree under the source_path and MOVES them
+# to a target directory with a name constructed from their create time. This flattens
+# the tree and gives everything a uniform name. It then resizes each image to resize_size
+# and dumps the resized copy in the resized_target_path directory.
+
+require 'fileutils'
+require 'time'
+
+# Configuration - this could be stored as YAML or JSON or we can
+# harness the AWESOME POWER OF RUBY! See resize_name for example.
+class Conf
+
+  # This class << self block transforms all the methods inside into
+  # class methods.
+  class << self
+
+    # This is where we'll find all the images
+    def source_path
+      #'/media/leslie/Data/all_photos/source'
+      '/home/leslie/Dropbox/Camera Uploads'
+    end
+
+    # This is where we'll move the images
+    def target_path
+      '/media/leslie/Data/all_photos/target'
+    end
+
+    # This is where we'll store the resized copies
+    def resize_target_path
+      '/media/leslie/Data/all_photos/resized'
+    end
+
+    # The size we'll resize to - an argument to the 'convert' command
+    def resize_size
+      '800x600'
+    end
+
+    # Convert filename into resized filename
+    def resize_name(name)
+      ext = File.extname(name)
+      base = File.basename(name, ext)
+      "#{base}_r#{ext}"
+    end  
+  end
+end
+
+class FindImage
+  # Iterate through files below path and return each JPG
+  def self.iterate(path)
+    Dir["#{path}/**/*"].select do |f|
+      if File.file?(f) && f =~ /\.jpg$/i
+        yield f
+      end
+    end
+  end
+end
+
+# The main program
+# 1. Find images
+# 2. Rename and move them into one flat directory
+# 3. Resize them into another directory
+class ImageMine
+
+  # initialize is a special name indicating a constructor in Ruby. When you call .new on 
+  # ImageMine, Ruby will create a new ImageMine object, run initialize and return the
+  # initialised object. You have to spell it the American way.
+  def initialize(config)
+    # The @ means the variable is an instance variable - 
+    # scoped to a single object (instance) of this class.
+    @config = config
+  end
+
+  def run
+    # This will run FindImage's iterate method. That method will YIELD a variable
+    # which comes through to this block as the variable 'file'
+    FindImage.iterate(@config.source_path) do |file|
+
+      # Ruby will unpack an array in an assignment with commas like this 
+      # so we can return two things from a method by returning a 2 element array
+      # and have the elements go into these two variables
+      dest, full_dest = move(file)
+      
+      resize_dest = File.join(@config.resize_target_path, dest)
+      resize(full_dest, resize_dest)
+    end
+    nil
+  end
+
+  # Run imagemagick's convert command to resize the images
+  def resize(input_file, output_file)
+    cmd = "/usr/bin/convert -resize #{@config.resize_size} '#{input_file}' '#{output_file}'"
+    puts cmd
+    `#{cmd}`
+  end  
+
+  # Move and rename the image to the time the picture was taken. If there's a
+  # conflict in the filename, iterate it. Returns the new image name and 
+  # the full destination path
+  def move(f)
+    i = 0
+    begin
+      dest = target_name(f, i)
+      full_dest = File.join(@config.target_path, dest)
+      puts "#{f} -> #{full_dest}"
+      i += 1
+    end while File.exist?(full_dest)
+    
+    FileUtils.mv(f, full_dest)
+
+    # Return both the name and the full path
+    [dest, full_dest]
+  end
+
+  # Create a new image name, based on when the picture was taken.
+  # Preserve the file extension.
+  def target_name(f, sub)
+    ext = File.extname(f).downcase
+    ctime = image_time(f)
+    sub = sub == 0 ? '' : ".#{sub}"
+    ctime.strftime("%Y-%m-%d-%H--%M-%S#{sub}#{ext}")
+  end
+
+  # Read the time the picture was taken using JPG exif tags -
+  # this is not the file modification or creation time.
+  # This is why we only support JPG right now - though we
+  # could adapt this to support other image types.
+  #
+  # Returns a DateTime
+  def image_time(f)
+    time_string = `exif -m --tag=DateTime '#{f}'`
+
+    # exif DateTime is in the format "yyyy:MM:dd HH:mm:ss"
+    # Use the regular expression operator '=~' to parse the string
+    time_string =~ /(....):(..):(..) (..):(..):(..)/
+
+    # Extract the parenthesised components in the regex ($1..$6)
+    # Convert the array of strings to base 10 integers
+    y, m, d, hh, mm, ss = [$1, $2, $3, $4, $5, $6].map{|x| x.to_i(10)}
+
+    DateTime.new(y, m, d, hh, mm, ss)
+  end
+end
+
+if $0 == __FILE__
+  ImageMine.new(Conf).run
+end

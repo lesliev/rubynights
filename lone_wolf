@@ -1,0 +1,112 @@
+#!/usr/bin/env ruby
+
+class Character
+  attr_accessor :endurance
+  attr_accessor :endurance_was
+
+  def initialize(endurance)
+    @endurance = endurance
+    @endurance_was = @endurance
+  end
+
+  def result(cr, r)
+    if cr < -10
+      return table[r][0]
+    elsif cr > 10
+      return table[r][22]
+    end
+
+    table[r][cr + 11]
+  end
+
+  def injure(delta)
+    # 99 tags instant-kills
+    @endurance_was = @endurance
+    @endurance = delta == 99 ? 0 : @endurance - delta
+  end
+
+  def dead?
+    @endurance <= 0
+  end
+
+  def to_s
+    return ' [D]' if dead?
+    ''
+  end
+end
+
+class Enemy < Character
+  def table
+    return @table if @table
+
+    @table = []
+
+    #           -11+ -10  -9 -8 -7 -6 -5  -4  -3  -2  -1   0   1   2   3   4   5   6   7   8  9   10  11+
+    @table[1] = [0,    0,  0, 0, 0, 0, 0,  1,  1,  2,  2,  3,  4,  4,  5,  5,  6,  6,  7,  7, 8,   8,  9]
+    @table[2] = [0,    0,  0, 0, 0, 1, 1,  2,  2,  3,  3,  4,  5,  5,  6,  6,  7,  7,  8,  8, 9,   9, 10]
+    @table[3] = [0,    0,  0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  6,  6,  7,  7,  8,  8,  9,  9, 10, 10, 11]
+    @table[4] = [0,    1,  1, 2, 2, 3, 3,  4,  4,  5,  5,  6,  7,  7,  8,  8,  9,  9, 10, 10, 11, 11, 12]
+    @table[5] = [1,    2,  2, 3, 3, 4, 4,  5,  5,  6,  6,  7,  8,  8,  9,  9, 10, 10, 11, 11, 12, 12, 14]
+    @table[6] = [2,    3,  3, 4, 4, 5, 5,  6,  6,  7,  7,  8,  9,  9, 10, 10, 11, 11, 12, 12, 14, 14, 16]
+    @table[7] = [3,    4,  4, 5, 5, 6, 6,  7,  7,  8,  8,  9, 10, 10, 11, 11, 12, 12, 14, 14, 16, 16, 18]
+    @table[8] = [4,    5,  5, 6, 6, 7, 7,  8,  8,  9,  9, 10, 11, 11, 12, 12, 14, 14, 16, 16, 18, 18, 99]
+    @table[9] = [5,    6,  6, 7, 7, 8, 8,  9,  9, 10, 10, 11, 12, 12, 14, 14, 16, 16, 18, 18, 99, 99, 99]
+    @table[0] = [6,    7,  7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 14, 14, 16, 16, 18, 18, 99, 99, 99, 99, 99]
+
+    @table
+  end
+end
+
+class LoneWolf < Character
+  def table
+    return @table if @table
+
+    @table = []
+
+    #           -11+ -10  -9 -8 -7 -6 -5  -4  -3  -2  -1   0   1   2   3   4   5   6   7   8  9   10  11+
+    @table[1] = [99,  99, 99, 8, 8, 6, 6,  6,  6,  5,  5,  5,  5,  5,  4,  4,  4,  4,  4,  4, 3,   3,  3]
+    @table[2] = [99,   8,  8, 7, 7, 6, 6,  5,  5,  5,  5,  4,  4,  4,  3,  3,  3,  3,  3,  3, 3,   3,  2]
+    @table[3] = [8,    7,  7, 6, 6, 5, 5,  5,  5,  4,  4,  4,  3,  3,  3,  3,  3,  3,  2,  2,  2,  2,  2]
+    @table[4] = [8,    7,  7, 6, 6, 5, 5,  4,  4,  4,  4,  3,  3,  3,  2,  2,  2,  2,  2,  2,  2,  2,  2]
+    @table[5] = [7,    6,  6, 5, 5, 4, 4,  4,  4,  3,  3,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  1]
+    @table[6] = [6,    6,  6, 5, 5, 4, 4,  3,  3,  2,  2,  2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1]
+    @table[7] = [5,    5,  5, 4, 4, 3, 3,  2,  2,  2,  2,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0]
+    @table[8] = [4,    4,  4, 3, 3, 2, 2,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]
+    @table[9] = [3,    3,  3, 2, 2, 0, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]
+    @table[0] = [0,    0,  0, 0, 0, 0, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]
+
+    @table
+  end
+end
+
+class Combat
+  def initialize(lw_cs, lw_e, e_cs, e_e)
+    lw = LoneWolf.new(lw_e)
+    enemy = Enemy.new(e_e)
+
+    cr = lw_cs - e_cs
+    puts "CR: #{cr}"
+
+    n = 1
+    loop do
+      r = rand(10)
+      print "\nRound #{n}, r=#{r}"
+      n += 1
+
+      [enemy, lw].each do |char|
+        delta = char.result(cr, r)
+        char.injure(delta)
+        print "\t#{char.class}: #{char.endurance_was} - #{delta} ~ #{char.endurance} #{char}"
+      end
+
+      # break if anyone's dead
+      break if [lw, enemy].any?{|char| char.dead?}
+    end
+
+    puts
+  end
+end
+
+Combat.new(33, 80, 38, 80)
+
+

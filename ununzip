@@ -1,0 +1,82 @@
+#!/usr/bin/env ruby
+
+class Ununzip
+
+  def initialize
+    files = []
+    opts = []
+    ARGV.each do |a|
+      if a[0] == '-'
+        opts << a
+      else
+        files << a
+      end
+    end
+
+    if files.empty? || files.length > 1
+      usage
+    end
+
+    if opts.length > 1 || (opts.length > 0 && opts.last != '-f')
+      usage
+    end
+
+    @remove = true if opts.last == '-f'
+    @zipfile = files.first
+  end
+
+  def usage
+    puts "Removes files that were extracted from a zip file"
+    puts "#{$0} zip_file.zip             # to see what will be removed"
+    puts "#{$0} -f zip_file.zip          # to actually remove them"
+    puts
+    exit
+  end
+
+  def run
+    dirs = []
+    
+    cmd = "unzip -l #{@zipfile}"
+    entries = `#{cmd}`
+    if $? != 0
+      puts "Error from unzip: #{$?}"
+      puts "Tried to run: #{cmd}"
+      puts
+      exit
+    end
+
+    if !@remove
+      puts "Trial run, going to run the following commands"
+      puts "Use -f to actually run them"
+      puts
+    end
+
+    entries = entries.split("\n")[3..-3].map{|x| x.split(/\s+/)[4]}
+    entries.each do |e|
+      if e[-1, 1] == '/'
+        dirs << e
+      else
+        cmd = "rm '#{e}'"
+        if @remove
+          `#{cmd}`
+        else
+          puts cmd
+        end
+      end
+    end
+
+    dirs.each do |d|
+      cmd = "rmdir -p '#{d}'"
+      if @remove
+        `#{cmd}`
+      else
+        puts cmd
+      end
+    end
+
+    puts
+  end
+end
+
+Ununzip.new.run
+
