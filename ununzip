@@ -51,9 +51,9 @@ class Ununzip
       puts
     end
 
-    entries = entries.split("\n")[3..-3].map{|x| x.split(/\s+/)[4]}
+    entries = entries.split("\n")[3..-3].map{|x| x.split(/\s+/)[4].gsub('../','')}
     entries.each do |e|
-      if e[-1, 1] == '/'
+      if e.chars.last == '/'
         dirs << e
       else
         cmd = "rm '#{e}'"
