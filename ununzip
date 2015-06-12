@@ -34,8 +34,6 @@ class Ununzip
   end
 
   def run
-    dirs = []
-    
     cmd = "unzip -l #{@zipfile}"
     entries = `#{cmd}`
     if $? != 0
@@ -51,8 +49,12 @@ class Ununzip
       puts
     end
 
-    entries = entries.split("\n")[3..-3].map{|x| x.split(/\s+/)[4].gsub('../','')}
-    entries.each do |e|
+    file_lines = entries.split("\n")[3..-3]
+    files_dirs = file_lines.map{|x| x.gsub(/^\s*\S+\s+\S+\s+\S+\s+/,'')}
+    files = files_dirs.map{|x| x.gsub('../','')}
+
+    dirs = []
+    files.each do |e|
       if e.chars.last == '/'
         dirs << e
       else
@@ -66,7 +68,7 @@ class Ununzip
     end
 
     dirs.each do |d|
-      cmd = "rmdir -p '#{d}'"
+      cmd = "rm -rf '#{d}'"
       if @remove
         `#{cmd}`
       else
